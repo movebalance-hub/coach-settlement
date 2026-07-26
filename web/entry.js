@@ -1,8 +1,10 @@
 const coachSelect = document.getElementById("coach-select");
 const newCoachField = document.getElementById("new-coach-field");
 const newCoachNameInput = document.getElementById("new-coach-name");
+const oneTimeCheckbox = document.getElementById("one-time-member");
 const memberNameInput = document.getElementById("member-name");
 const memberPickerList = document.getElementById("member-picker-list");
+const memberCurrentRemainingField = document.getElementById("member-current-remaining-field");
 const memberCurrentRemainingInput = document.getElementById("member-current-remaining");
 const unitPriceInput = document.getElementById("unit-price");
 const sessionsUsedInput = document.getElementById("sessions-used");
@@ -15,7 +17,9 @@ const listBody = document.getElementById("record-list");
 const editCard = document.getElementById("edit-card");
 const editForm = document.getElementById("edit-form");
 const editCoachSelect = document.getElementById("edit-coach");
+const editOneTimeCheckbox = document.getElementById("edit-one-time-member");
 const editMemberInput = document.getElementById("edit-member");
+const editMemberCurrentRemainingField = document.getElementById("edit-member-current-remaining-field");
 const editMemberCurrentRemainingInput = document.getElementById("edit-member-current-remaining");
 const editPriceInput = document.getElementById("edit-price");
 const editSessionsInput = document.getElementById("edit-sessions");
@@ -133,6 +137,8 @@ function openEditForm(record) {
   editMemberInput.value = record.member_name;
   editMatchedMemberId = record.member_id || null;
   const member = record.member_id ? membersById.get(record.member_id) : null;
+  editOneTimeCheckbox.checked = !record.member_id;
+  editMemberCurrentRemainingField.style.display = record.member_id ? "block" : "none";
   editMemberCurrentRemainingInput.value = member ? member.remaining_sessions : "";
   editPriceInput.value = record.unit_price;
   editSessionsInput.value = record.sessions_used;
@@ -183,7 +189,26 @@ coachSelect.addEventListener("change", () => {
   newCoachField.style.display = coachSelect.value === NEW_COACH_VALUE ? "block" : "none";
 });
 
+oneTimeCheckbox.addEventListener("change", () => {
+  const isOneTime = oneTimeCheckbox.checked;
+  memberCurrentRemainingField.style.display = isOneTime ? "none" : "block";
+  memberNameInput.placeholder = isOneTime
+    ? "直接輸入姓名即可（單次消費，不建檔）"
+    : "輸入姓名以搜尋既有會員";
+  mainMatchedMemberId = null;
+  memberCurrentRemainingInput.value = "";
+});
+
+editOneTimeCheckbox.addEventListener("change", () => {
+  const isOneTime = editOneTimeCheckbox.checked;
+  editMemberCurrentRemainingField.style.display = isOneTime ? "none" : "block";
+  editMatchedMemberId = null;
+  editMemberCurrentRemainingInput.value = "";
+});
+
 memberNameInput.addEventListener("input", () => {
+  if (oneTimeCheckbox.checked) return;
+
   const member = membersByName.get(memberNameInput.value.trim());
 
   if (!member) {
@@ -200,6 +225,8 @@ memberNameInput.addEventListener("input", () => {
 });
 
 editMemberInput.addEventListener("input", () => {
+  if (editOneTimeCheckbox.checked) return;
+
   const member = membersByName.get(editMemberInput.value.trim());
 
   if (!member) {
@@ -224,8 +251,9 @@ form.addEventListener("submit", async (event) => {
     coachName = newCoachNameInput.value.trim();
   }
 
+  const isOneTime = oneTimeCheckbox.checked;
   const memberName = memberNameInput.value.trim();
-  const member = membersByName.get(memberName);
+  const member = isOneTime ? null : membersByName.get(memberName);
   const unitPrice = parseFloat(unitPriceInput.value);
   const sessionsUsed = parseFloat(sessionsUsedInput.value);
 
@@ -234,8 +262,8 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (!member) {
-    showMessage(messageBox, "查無此會員，請確認姓名或先至「會員管理」頁新增會員", "error");
+  if (!isOneTime && !member) {
+    showMessage(messageBox, "查無此會員，請確認姓名，或勾選「單次消費會員」直接登記", "error");
     return;
   }
 
@@ -255,14 +283,23 @@ form.addEventListener("submit", async (event) => {
     }
   }
 
-  const { error } = await window.dbClient.from("sales_records").insert({
+  const newRecord = {
     sales_date: salesDateInput.value,
     coach_name: coachName,
-    member_name: member.name,
-    member_id: member.id,
     unit_price: unitPrice,
     sessions_used: sessionsUsed
-  });
+  };
+
+  if (isOneTime) {
+    newRecord.member_name = memberName;
+    newRecord.member_id = null;
+    newRecord.remaining_sessions = 0;
+  } else {
+    newRecord.member_name = member.name;
+    newRecord.member_id = member.id;
+  }
+
+  const { error } = await window.dbClient.from("sales_records").insert(newRecord);
 
   submitBtn.disabled = false;
   submitBtn.textContent = "送出登記";
@@ -331,8 +368,9 @@ editForm.addEventListener("submit", async (event) => {
 
   if (!editingId) return;
 
+  const isOneTime = editOneTimeCheckbox.checked;
   const memberName = editMemberInput.value.trim();
-  const member = membersByName.get(memberName);
+  const member = isOneTime ? null : membersByName.get(memberName);
 
   const updated = {
     sales_date: editDateInput.value,
@@ -347,13 +385,17 @@ editForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (!member) {
-    showMessage(editMessageBox, "查無此會員，請確認姓名或先至「會員管理」頁新增會員", "error");
+  if (!isOneTime && !member) {
+    showMessage(editMessageBox, "查無此會員，請確認姓名，或勾選「單次消費會員」直接儲存", "error");
     return;
   }
 
-  updated.member_id = member.id;
-  updated.member_name = member.name;
+  if (isOneTime) {
+    updated.member_id = null;
+  } else {
+    updated.member_id = member.id;
+    updated.member_name = member.name;
+  }
 
   editSaveBtn.disabled = true;
   editSaveBtn.textContent = "儲存中...";

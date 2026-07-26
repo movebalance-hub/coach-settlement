@@ -29,13 +29,20 @@
         <input type="text" id="new-coach-name" placeholder="輸入新教練姓名" />
       </div>
 
+      <div class="checkbox-field">
+        <label>
+          <input type="checkbox" id="one-time-member" />
+          單次消費會員（不建檔，直接輸入姓名即可）
+        </label>
+      </div>
+
       <div class="field">
         <label for="member-name">會員姓名</label>
         <input type="text" id="member-name" required placeholder="輸入姓名以搜尋既有會員" list="member-picker-list" autocomplete="off" />
         <datalist id="member-picker-list"></datalist>
       </div>
 
-      <div class="field">
+      <div class="field" id="member-current-remaining-field">
         <label for="member-current-remaining">會員目前剩餘堂數</label>
         <input type="text" id="member-current-remaining" placeholder="選擇會員後自動顯示" disabled />
       </div>
@@ -88,12 +95,19 @@
         <select id="edit-coach" required></select>
       </div>
 
+      <div class="checkbox-field">
+        <label>
+          <input type="checkbox" id="edit-one-time-member" />
+          單次消費會員（不建檔，直接輸入姓名即可）
+        </label>
+      </div>
+
       <div class="field">
         <label for="edit-member">會員姓名</label>
         <input type="text" id="edit-member" required list="member-picker-list" autocomplete="off" />
       </div>
 
-      <div class="field">
+      <div class="field" id="edit-member-current-remaining-field">
         <label for="edit-member-current-remaining">會員目前剩餘堂數</label>
         <input type="text" id="edit-member-current-remaining" disabled />
       </div>
