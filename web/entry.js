@@ -1,0 +1,250 @@
+const coachSelect = document.getElementById("coach-select");
+const newCoachField = document.getElementById("new-coach-field");
+const newCoachNameInput = document.getElementById("new-coach-name");
+const memberNameInput = document.getElementById("member-name");
+const unitPriceInput = document.getElementById("unit-price");
+const sessionsUsedInput = document.getElementById("sessions-used");
+const remainingSessionsInput = document.getElementById("remaining-sessions");
+const salesDateInput = document.getElementById("sales-date");
+const form = document.getElementById("entry-form");
+const submitBtn = document.getElementById("submit-btn");
+const messageBox = document.getElementById("message");
+const listBody = document.getElementById("record-list");
+
+const NEW_COACH_VALUE = "__new__";
+
+let coachNames = [];
+let recordsById = new Map();
+
+async function loadCoaches() {
+  const { data, error } = await window.dbClient
+    .from("coaches")
+    .select("name")
+    .order("name");
+
+  if (error) {
+    showMessage(messageBox, `載入教練清單失敗：${error.message}`, "error");
+    return;
+  }
+
+  coachNames = data.map((c) => c.name);
+
+  coachSelect.innerHTML = '<option value="">請選擇教練</option>';
+  for (const name of coachNames) {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    coachSelect.appendChild(option);
+  }
+
+  const newOption = document.createElement("option");
+  newOption.value = NEW_COACH_VALUE;
+  newOption.textContent = "+ 新增教練...";
+  coachSelect.appendChild(newOption);
+}
+
+function viewRowHtml(r) {
+  return `
+    <tr data-id="${r.id}">
+      <td>${r.sales_date}</td>
+      <td>${escapeHtml(r.coach_name)}</td>
+      <td>${escapeHtml(r.member_name)}</td>
+      <td>${r.unit_price}</td>
+      <td>${r.sessions_used}</td>
+      <td>${r.remaining_sessions}</td>
+      <td class="row-actions">
+        <button type="button" class="edit-btn" data-id="${r.id}">編輯</button>
+        <button type="button" class="delete-btn" data-id="${r.id}">刪除</button>
+      </td>
+    </tr>`;
+}
+
+function editRowHtml(r) {
+  const options = [...new Set([r.coach_name, ...coachNames])];
+  const coachOptionsHtml = options
+    .map(
+      (name) =>
+        `<option value="${escapeHtml(name)}" ${name === r.coach_name ? "selected" : ""}>${escapeHtml(name)}</option>`
+    )
+    .join("");
+
+  return `
+    <tr data-id="${r.id}">
+      <td><input type="date" class="edit-date" value="${r.sales_date}" /></td>
+      <td><select class="edit-coach">${coachOptionsHtml}</select></td>
+      <td><input type="text" class="edit-member" value="${escapeHtml(r.member_name)}" /></td>
+      <td><input type="number" class="edit-price" step="0.01" min="0" value="${r.unit_price}" /></td>
+      <td><input type="number" class="edit-sessions" step="0.5" min="0.5" value="${r.sessions_used}" /></td>
+      <td><input type="number" class="edit-remaining" step="0.5" min="0" value="${r.remaining_sessions}" /></td>
+      <td class="row-actions">
+        <button type="button" class="save-btn" data-id="${r.id}">儲存</button>
+        <button type="button" class="cancel-btn" data-id="${r.id}">取消</button>
+      </td>
+    </tr>`;
+}
+
+async function loadRecentRecords() {
+  const { data, error } = await window.dbClient
+    .from("sales_records")
+    .select("id, sales_date, coach_name, member_name, unit_price, sessions_used, remaining_sessions")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    listBody.innerHTML = `<tr class="empty-row"><td colspan="7">載入失敗：${error.message}</td></tr>`;
+    return;
+  }
+
+  recordsById = new Map(data.map((r) => [r.id, r]));
+
+  if (data.length === 0) {
+    listBody.innerHTML = '<tr class="empty-row"><td colspan="7">尚無登記紀錄</td></tr>';
+    return;
+  }
+
+  listBody.innerHTML = data.map(viewRowHtml).join("");
+}
+
+coachSelect.addEventListener("change", () => {
+  newCoachField.style.display = coachSelect.value === NEW_COACH_VALUE ? "block" : "none";
+});
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearMessage(messageBox);
+
+  let coachName = coachSelect.value;
+  if (coachName === NEW_COACH_VALUE) {
+    coachName = newCoachNameInput.value.trim();
+  }
+
+  const memberName = memberNameInput.value.trim();
+  const unitPrice = parseFloat(unitPriceInput.value);
+  const sessionsUsed = parseFloat(sessionsUsedInput.value);
+  const remainingSessions = parseFloat(remainingSessionsInput.value);
+
+  if (!coachName || !memberName || !unitPrice || !sessionsUsed || isNaN(remainingSessions)) {
+    showMessage(messageBox, "請完整填寫所有欄位", "error");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "送出中...";
+
+  if (coachSelect.value === NEW_COACH_VALUE) {
+    const { error: coachError } = await window.dbClient
+      .from("coaches")
+      .upsert({ name: coachName }, { onConflict: "name", ignoreDuplicates: true });
+
+    if (coachError) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "送出登記";
+      showMessage(messageBox, `新增教練失敗：${coachError.message}`, "error");
+      return;
+    }
+  }
+
+  const { error } = await window.dbClient.from("sales_records").insert({
+    sales_date: salesDateInput.value,
+    coach_name: coachName,
+    member_name: memberName,
+    unit_price: unitPrice,
+    sessions_used: sessionsUsed,
+    remaining_sessions: remainingSessions
+  });
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = "送出登記";
+
+  if (error) {
+    showMessage(messageBox, `登記失敗：${error.message}`, "error");
+    return;
+  }
+
+  showMessage(messageBox, "登記成功！", "success");
+  memberNameInput.value = "";
+  unitPriceInput.value = "";
+  sessionsUsedInput.value = "";
+  remainingSessionsInput.value = "";
+
+  if (coachSelect.value === NEW_COACH_VALUE) {
+    newCoachNameInput.value = "";
+    newCoachField.style.display = "none";
+    await loadCoaches();
+    coachSelect.value = coachName;
+  }
+
+  await loadRecentRecords();
+});
+
+listBody.addEventListener("click", async (event) => {
+  const target = event.target;
+  const id = target.dataset.id;
+  if (!id) return;
+
+  const record = recordsById.get(id);
+  const tr = target.closest("tr");
+
+  if (target.classList.contains("edit-btn")) {
+    tr.outerHTML = editRowHtml(record);
+    return;
+  }
+
+  if (target.classList.contains("cancel-btn")) {
+    tr.outerHTML = viewRowHtml(record);
+    return;
+  }
+
+  if (target.classList.contains("delete-btn")) {
+    const confirmed = confirm(
+      `確定要刪除「${record.member_name}」${record.sales_date} 的這筆銷課紀錄嗎？此動作無法復原。`
+    );
+    if (!confirmed) return;
+
+    const { error } = await window.dbClient.from("sales_records").delete().eq("id", id);
+    if (error) {
+      showMessage(messageBox, `刪除失敗：${error.message}`, "error");
+      return;
+    }
+    showMessage(messageBox, "已刪除該筆紀錄", "success");
+    await loadRecentRecords();
+    return;
+  }
+
+  if (target.classList.contains("save-btn")) {
+    const updated = {
+      sales_date: tr.querySelector(".edit-date").value,
+      coach_name: tr.querySelector(".edit-coach").value,
+      member_name: tr.querySelector(".edit-member").value.trim(),
+      unit_price: parseFloat(tr.querySelector(".edit-price").value),
+      sessions_used: parseFloat(tr.querySelector(".edit-sessions").value),
+      remaining_sessions: parseFloat(tr.querySelector(".edit-remaining").value)
+    };
+
+    if (
+      !updated.coach_name ||
+      !updated.member_name ||
+      !updated.unit_price ||
+      !updated.sessions_used ||
+      isNaN(updated.remaining_sessions)
+    ) {
+      showMessage(messageBox, "請完整填寫所有欄位", "error");
+      return;
+    }
+
+    const { error } = await window.dbClient.from("sales_records").update(updated).eq("id", id);
+    if (error) {
+      showMessage(messageBox, `更新失敗：${error.message}`, "error");
+      return;
+    }
+    showMessage(messageBox, "已更新該筆紀錄", "success");
+    await loadRecentRecords();
+    return;
+  }
+});
+
+salesDateInput.value = new Date().toISOString().slice(0, 10);
+window.requireAuth(() => {
+  loadCoaches();
+  loadRecentRecords();
+});

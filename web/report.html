@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant" class="app-locked">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>月結報表</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html">首頁</a>
+    <a href="entry.html">快速登記</a>
+    <a href="report.html" class="active">月結報表</a>
+  </nav>
+
+  <div class="card">
+    <h1>月結報表</h1>
+    <div class="field">
+      <label for="month-select">選擇月份</label>
+      <input type="month" id="month-select" />
+    </div>
+    <div class="button-row">
+      <button type="button" id="export-btn">匯出本月紀錄（CSV）</button>
+      <button type="button" id="clear-btn" class="danger-btn">清空本月紀錄</button>
+    </div>
+    <div class="message" id="message"></div>
+  </div>
+
+  <div class="card">
+    <h2>依單價分組（本月各單價方案銷課堂數）</h2>
+    <table class="list-table">
+      <thead>
+        <tr>
+          <th>單價</th>
+          <th>銷課堂數</th>
+        </tr>
+      </thead>
+      <tbody id="price-list">
+        <tr class="empty-row"><td colspan="2">載入中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>依教練分組（本月銷課總堂數 / 總金額）</h2>
+    <table class="list-table">
+      <thead>
+        <tr>
+          <th>教練</th>
+          <th>總堂數</th>
+          <th>總金額</th>
+        </tr>
+      </thead>
+      <tbody id="coach-list-report">
+        <tr class="empty-row"><td colspan="3">載入中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="common.js"></script>
+  <script src="report.js"></script>
+</body>
+</html>
