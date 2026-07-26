@@ -79,6 +79,47 @@
     </table>
   </div>
 
+  <div class="card" id="edit-card" style="display: none">
+    <h2>編輯登記紀錄</h2>
+    <form id="edit-form">
+      <div class="field">
+        <label for="edit-coach">教練</label>
+        <select id="edit-coach" required></select>
+      </div>
+
+      <div class="field">
+        <label for="edit-member">會員姓名</label>
+        <input type="text" id="edit-member" required list="member-name-list" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label for="edit-price">方案單價</label>
+        <input type="number" id="edit-price" step="0.01" min="0" required />
+      </div>
+
+      <div class="field">
+        <label for="edit-sessions">本次銷課堂數</label>
+        <input type="number" id="edit-sessions" step="0.5" min="0.5" required />
+      </div>
+
+      <div class="field">
+        <label for="edit-remaining">剩餘堂數（純紀錄，不自動計算）</label>
+        <input type="number" id="edit-remaining" step="0.5" min="0" required />
+      </div>
+
+      <div class="field">
+        <label for="edit-date">銷課日期</label>
+        <input type="date" id="edit-date" required />
+      </div>
+
+      <div class="button-row">
+        <button type="submit" id="edit-save-btn">儲存</button>
+        <button type="button" id="edit-cancel-btn" class="secondary-btn">取消</button>
+      </div>
+      <div class="message" id="edit-message"></div>
+    </form>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="auth.js"></script>

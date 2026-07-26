@@ -12,10 +12,23 @@ const submitBtn = document.getElementById("submit-btn");
 const messageBox = document.getElementById("message");
 const listBody = document.getElementById("record-list");
 
+const editCard = document.getElementById("edit-card");
+const editForm = document.getElementById("edit-form");
+const editCoachSelect = document.getElementById("edit-coach");
+const editMemberInput = document.getElementById("edit-member");
+const editPriceInput = document.getElementById("edit-price");
+const editSessionsInput = document.getElementById("edit-sessions");
+const editRemainingInput = document.getElementById("edit-remaining");
+const editDateInput = document.getElementById("edit-date");
+const editCancelBtn = document.getElementById("edit-cancel-btn");
+const editSaveBtn = document.getElementById("edit-save-btn");
+const editMessageBox = document.getElementById("edit-message");
+
 const NEW_COACH_VALUE = "__new__";
 
 let coachNames = [];
 let recordsById = new Map();
+let editingId = null;
 
 function showCoachLoadFailure(message) {
   coachSelect.innerHTML = '<option value="">載入失敗，請重新整理頁面</option>';
@@ -93,28 +106,39 @@ function viewRowHtml(r) {
     </tr>`;
 }
 
-function editRowHtml(r) {
-  const options = [...new Set([r.coach_name, ...coachNames])];
-  const coachOptionsHtml = options
+function highlightEditingRow() {
+  for (const tr of listBody.querySelectorAll("tr")) {
+    tr.classList.toggle("editing-row", tr.dataset.id === editingId);
+  }
+}
+
+function openEditForm(record) {
+  editingId = record.id;
+
+  const coachOptions = [...new Set([record.coach_name, ...coachNames])];
+  editCoachSelect.innerHTML = coachOptions
     .map(
       (name) =>
-        `<option value="${escapeHtml(name)}" ${name === r.coach_name ? "selected" : ""}>${escapeHtml(name)}</option>`
+        `<option value="${escapeHtml(name)}" ${name === record.coach_name ? "selected" : ""}>${escapeHtml(name)}</option>`
     )
     .join("");
 
-  return `
-    <tr data-id="${r.id}">
-      <td><input type="date" class="edit-date" value="${r.sales_date}" /></td>
-      <td><select class="edit-coach">${coachOptionsHtml}</select></td>
-      <td><input type="text" class="edit-member" value="${escapeHtml(r.member_name)}" /></td>
-      <td><input type="number" class="edit-price" step="0.01" min="0" value="${r.unit_price}" /></td>
-      <td><input type="number" class="edit-sessions" step="0.5" min="0.5" value="${r.sessions_used}" /></td>
-      <td><input type="number" class="edit-remaining" step="0.5" min="0" value="${r.remaining_sessions}" /></td>
-      <td class="row-actions">
-        <button type="button" class="save-btn" data-id="${r.id}">儲存</button>
-        <button type="button" class="cancel-btn" data-id="${r.id}">取消</button>
-      </td>
-    </tr>`;
+  editMemberInput.value = record.member_name;
+  editPriceInput.value = record.unit_price;
+  editSessionsInput.value = record.sessions_used;
+  editRemainingInput.value = record.remaining_sessions;
+  editDateInput.value = record.sales_date;
+
+  clearMessage(editMessageBox);
+  editCard.style.display = "block";
+  highlightEditingRow();
+  editCard.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeEditForm() {
+  editingId = null;
+  editCard.style.display = "none";
+  highlightEditingRow();
 }
 
 async function loadRecentRecords() {
@@ -140,6 +164,7 @@ async function loadRecentRecords() {
     }
 
     listBody.innerHTML = data.map(viewRowHtml).join("");
+    if (editingId) highlightEditingRow();
   } catch (err) {
     listBody.innerHTML = `<tr class="empty-row"><td colspan="7">載入失敗：${err.message}，請重新整理頁面</td></tr>`;
   }
@@ -223,15 +248,9 @@ listBody.addEventListener("click", async (event) => {
   if (!id) return;
 
   const record = recordsById.get(id);
-  const tr = target.closest("tr");
 
   if (target.classList.contains("edit-btn")) {
-    tr.outerHTML = editRowHtml(record);
-    return;
-  }
-
-  if (target.classList.contains("cancel-btn")) {
-    tr.outerHTML = viewRowHtml(record);
+    openEditForm(record);
     return;
   }
 
@@ -246,41 +265,59 @@ listBody.addEventListener("click", async (event) => {
       showMessage(messageBox, `刪除失敗：${error.message}`, "error");
       return;
     }
+    if (id === editingId) closeEditForm();
     showMessage(messageBox, "已刪除該筆紀錄", "success");
     await loadRecentRecords();
     return;
   }
+});
 
-  if (target.classList.contains("save-btn")) {
-    const updated = {
-      sales_date: tr.querySelector(".edit-date").value,
-      coach_name: tr.querySelector(".edit-coach").value,
-      member_name: tr.querySelector(".edit-member").value.trim(),
-      unit_price: parseFloat(tr.querySelector(".edit-price").value),
-      sessions_used: parseFloat(tr.querySelector(".edit-sessions").value),
-      remaining_sessions: parseFloat(tr.querySelector(".edit-remaining").value)
-    };
+editCancelBtn.addEventListener("click", () => {
+  closeEditForm();
+});
 
-    if (
-      !updated.coach_name ||
-      !updated.member_name ||
-      !updated.unit_price ||
-      !updated.sessions_used ||
-      isNaN(updated.remaining_sessions)
-    ) {
-      showMessage(messageBox, "請完整填寫所有欄位", "error");
-      return;
-    }
+editForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearMessage(editMessageBox);
 
-    const { error } = await window.dbClient.from("sales_records").update(updated).eq("id", id);
-    if (error) {
-      showMessage(messageBox, `更新失敗：${error.message}`, "error");
-      return;
-    }
-    showMessage(messageBox, "已更新該筆紀錄", "success");
-    await loadRecentRecords();
+  if (!editingId) return;
+
+  const updated = {
+    sales_date: editDateInput.value,
+    coach_name: editCoachSelect.value,
+    member_name: editMemberInput.value.trim(),
+    unit_price: parseFloat(editPriceInput.value),
+    sessions_used: parseFloat(editSessionsInput.value),
+    remaining_sessions: parseFloat(editRemainingInput.value)
+  };
+
+  if (
+    !updated.coach_name ||
+    !updated.member_name ||
+    !updated.unit_price ||
+    !updated.sessions_used ||
+    isNaN(updated.remaining_sessions)
+  ) {
+    showMessage(editMessageBox, "請完整填寫所有欄位", "error");
     return;
   }
+
+  editSaveBtn.disabled = true;
+  editSaveBtn.textContent = "儲存中...";
+
+  const { error } = await window.dbClient.from("sales_records").update(updated).eq("id", editingId);
+
+  editSaveBtn.disabled = false;
+  editSaveBtn.textContent = "儲存";
+
+  if (error) {
+    showMessage(editMessageBox, `更新失敗：${error.message}`, "error");
+    return;
+  }
+
+  closeEditForm();
+  showMessage(messageBox, "已更新該筆紀錄", "success");
+  await loadRecentRecords();
 });
 
 salesDateInput.value = new Date().toISOString().slice(0, 10);

@@ -135,6 +135,14 @@ button.danger-btn:hover {
   background: #a40e26;
 }
 
+button.secondary-btn {
+  background: #6e7781;
+}
+
+button.secondary-btn:hover {
+  background: #57606a;
+}
+
 .message {
   margin-top: 16px;
   padding: 12px;
@@ -200,18 +208,8 @@ table.list-table .row-actions button.delete-btn:hover {
   background: #a40e26;
 }
 
-table.list-table .row-actions button.cancel-btn {
-  background: #6e7781;
-}
-
-table.list-table .row-actions button.cancel-btn:hover {
-  background: #57606a;
-}
-
-table.list-table input,
-table.list-table select {
-  padding: 6px 8px;
-  font-size: 13px;
+table.list-table tr.editing-row {
+  background: #eef2ff;
 }
 
 /* 密碼保護：密碼還沒通過前，把 body 底下所有內容藏起來，只留密碼疊層 */
