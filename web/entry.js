@@ -2,6 +2,7 @@ const coachSelect = document.getElementById("coach-select");
 const newCoachField = document.getElementById("new-coach-field");
 const newCoachNameInput = document.getElementById("new-coach-name");
 const memberNameInput = document.getElementById("member-name");
+const memberNameList = document.getElementById("member-name-list");
 const unitPriceInput = document.getElementById("unit-price");
 const sessionsUsedInput = document.getElementById("sessions-used");
 const remainingSessionsInput = document.getElementById("remaining-sessions");
@@ -53,6 +54,26 @@ async function loadCoaches() {
     coachSelect.appendChild(newOption);
   } catch (err) {
     showCoachLoadFailure(`載入教練清單失敗：${err.message}`);
+  }
+}
+
+async function loadMemberNames() {
+  if (!window.dbClient) return;
+
+  try {
+    const { data, error } = await window.dbClient
+      .from("sales_records")
+      .select("member_name")
+      .order("member_name");
+
+    if (error) throw error;
+
+    const uniqueNames = [...new Set(data.map((r) => r.member_name))];
+    memberNameList.innerHTML = uniqueNames
+      .map((name) => `<option value="${escapeHtml(name)}"></option>`)
+      .join("");
+  } catch (err) {
+    console.error("載入會員姓名清單失敗：", err.message);
   }
 }
 
@@ -266,4 +287,5 @@ salesDateInput.value = new Date().toISOString().slice(0, 10);
 window.requireAuth(() => {
   loadCoaches();
   loadRecentRecords();
+  loadMemberNames();
 });
