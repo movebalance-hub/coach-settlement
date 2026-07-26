@@ -16,31 +16,44 @@ const NEW_COACH_VALUE = "__new__";
 let coachNames = [];
 let recordsById = new Map();
 
-async function loadCoaches() {
-  const { data, error } = await window.dbClient
-    .from("coaches")
-    .select("name")
-    .order("name");
+function showCoachLoadFailure(message) {
+  coachSelect.innerHTML = '<option value="">載入失敗，請重新整理頁面</option>';
+  coachSelect.disabled = true;
+  showMessage(messageBox, `${message}，請重新整理頁面再試一次`, "error");
+}
 
-  if (error) {
-    showMessage(messageBox, `載入教練清單失敗：${error.message}`, "error");
+async function loadCoaches() {
+  if (!window.dbClient) {
+    showCoachLoadFailure("教練清單載入失敗");
     return;
   }
 
-  coachNames = data.map((c) => c.name);
+  try {
+    const { data, error } = await window.dbClient
+      .from("coaches")
+      .select("name")
+      .order("name");
 
-  coachSelect.innerHTML = '<option value="">請選擇教練</option>';
-  for (const name of coachNames) {
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
-    coachSelect.appendChild(option);
+    if (error) throw error;
+
+    coachNames = data.map((c) => c.name);
+
+    coachSelect.disabled = false;
+    coachSelect.innerHTML = '<option value="">請選擇教練</option>';
+    for (const name of coachNames) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      coachSelect.appendChild(option);
+    }
+
+    const newOption = document.createElement("option");
+    newOption.value = NEW_COACH_VALUE;
+    newOption.textContent = "+ 新增教練...";
+    coachSelect.appendChild(newOption);
+  } catch (err) {
+    showCoachLoadFailure(`載入教練清單失敗：${err.message}`);
   }
-
-  const newOption = document.createElement("option");
-  newOption.value = NEW_COACH_VALUE;
-  newOption.textContent = "+ 新增教練...";
-  coachSelect.appendChild(newOption);
 }
 
 function viewRowHtml(r) {
@@ -84,25 +97,31 @@ function editRowHtml(r) {
 }
 
 async function loadRecentRecords() {
-  const { data, error } = await window.dbClient
-    .from("sales_records")
-    .select("id, sales_date, coach_name, member_name, unit_price, sessions_used, remaining_sessions")
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  if (error) {
-    listBody.innerHTML = `<tr class="empty-row"><td colspan="7">載入失敗：${error.message}</td></tr>`;
+  if (!window.dbClient) {
+    listBody.innerHTML = '<tr class="empty-row"><td colspan="7">載入失敗，請重新整理頁面</td></tr>';
     return;
   }
 
-  recordsById = new Map(data.map((r) => [r.id, r]));
+  try {
+    const { data, error } = await window.dbClient
+      .from("sales_records")
+      .select("id, sales_date, coach_name, member_name, unit_price, sessions_used, remaining_sessions")
+      .order("created_at", { ascending: false })
+      .limit(20);
 
-  if (data.length === 0) {
-    listBody.innerHTML = '<tr class="empty-row"><td colspan="7">尚無登記紀錄</td></tr>';
-    return;
+    if (error) throw error;
+
+    recordsById = new Map(data.map((r) => [r.id, r]));
+
+    if (data.length === 0) {
+      listBody.innerHTML = '<tr class="empty-row"><td colspan="7">尚無登記紀錄</td></tr>';
+      return;
+    }
+
+    listBody.innerHTML = data.map(viewRowHtml).join("");
+  } catch (err) {
+    listBody.innerHTML = `<tr class="empty-row"><td colspan="7">載入失敗：${err.message}，請重新整理頁面</td></tr>`;
   }
-
-  listBody.innerHTML = data.map(viewRowHtml).join("");
 }
 
 coachSelect.addEventListener("change", () => {

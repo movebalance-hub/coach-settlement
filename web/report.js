@@ -13,51 +13,64 @@ function monthRange(monthValue) {
   return { start: toISO(firstDay), end: toISO(lastDay) };
 }
 
+function showReportLoadFailure(message) {
+  priceListBody.innerHTML = '<tr class="empty-row"><td colspan="2">載入失敗，請重新整理頁面</td></tr>';
+  coachListBody.innerHTML = '<tr class="empty-row"><td colspan="3">載入失敗，請重新整理頁面</td></tr>';
+  showMessage(messageBox, `${message}，請重新整理頁面再試一次`, "error");
+}
+
 async function loadReport() {
   clearMessage(messageBox);
+
+  if (!window.dbClient) {
+    showReportLoadFailure("報表載入失敗");
+    return;
+  }
+
   const { start, end } = monthRange(monthSelect.value);
 
-  const { data, error } = await window.dbClient
-    .from("sales_records")
-    .select("coach_name, unit_price, sessions_used, amount")
-    .gte("sales_date", start)
-    .lte("sales_date", end);
+  try {
+    const { data, error } = await window.dbClient
+      .from("sales_records")
+      .select("coach_name, unit_price, sessions_used, amount")
+      .gte("sales_date", start)
+      .lte("sales_date", end);
 
-  if (error) {
-    showMessage(messageBox, `載入報表失敗：${error.message}`, "error");
-    return;
+    if (error) throw error;
+
+    if (data.length === 0) {
+      priceListBody.innerHTML = '<tr class="empty-row"><td colspan="2">本月無銷課紀錄</td></tr>';
+      coachListBody.innerHTML = '<tr class="empty-row"><td colspan="3">本月無銷課紀錄</td></tr>';
+      return;
+    }
+
+    const byPrice = new Map();
+    const byCoach = new Map();
+
+    for (const r of data) {
+      byPrice.set(r.unit_price, (byPrice.get(r.unit_price) || 0) + Number(r.sessions_used));
+
+      const coachStats = byCoach.get(r.coach_name) || { sessions: 0, amount: 0 };
+      coachStats.sessions += Number(r.sessions_used);
+      coachStats.amount += Number(r.amount);
+      byCoach.set(r.coach_name, coachStats);
+    }
+
+    const priceRows = [...byPrice.entries()].sort((a, b) => a[0] - b[0]);
+    priceListBody.innerHTML = priceRows
+      .map(([price, sessions]) => `<tr><td>${price}</td><td>${sessions}</td></tr>`)
+      .join("");
+
+    const coachRows = [...byCoach.entries()].sort((a, b) => b[1].amount - a[1].amount);
+    coachListBody.innerHTML = coachRows
+      .map(
+        ([coach, stats]) =>
+          `<tr><td>${escapeHtml(coach)}</td><td>${stats.sessions}</td><td>${stats.amount}</td></tr>`
+      )
+      .join("");
+  } catch (err) {
+    showReportLoadFailure(`載入報表失敗：${err.message}`);
   }
-
-  if (data.length === 0) {
-    priceListBody.innerHTML = '<tr class="empty-row"><td colspan="2">本月無銷課紀錄</td></tr>';
-    coachListBody.innerHTML = '<tr class="empty-row"><td colspan="3">本月無銷課紀錄</td></tr>';
-    return;
-  }
-
-  const byPrice = new Map();
-  const byCoach = new Map();
-
-  for (const r of data) {
-    byPrice.set(r.unit_price, (byPrice.get(r.unit_price) || 0) + Number(r.sessions_used));
-
-    const coachStats = byCoach.get(r.coach_name) || { sessions: 0, amount: 0 };
-    coachStats.sessions += Number(r.sessions_used);
-    coachStats.amount += Number(r.amount);
-    byCoach.set(r.coach_name, coachStats);
-  }
-
-  const priceRows = [...byPrice.entries()].sort((a, b) => a[0] - b[0]);
-  priceListBody.innerHTML = priceRows
-    .map(([price, sessions]) => `<tr><td>${price}</td><td>${sessions}</td></tr>`)
-    .join("");
-
-  const coachRows = [...byCoach.entries()].sort((a, b) => b[1].amount - a[1].amount);
-  coachListBody.innerHTML = coachRows
-    .map(
-      ([coach, stats]) =>
-        `<tr><td>${escapeHtml(coach)}</td><td>${stats.sessions}</td><td>${stats.amount}</td></tr>`
-    )
-    .join("");
 }
 
 function monthLabel(monthValue) {

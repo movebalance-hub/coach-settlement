@@ -67,12 +67,22 @@
     window.addEventListener("app-authed", callback, { once: true });
   };
 
-  if (isStoredAuthValid()) {
-    unlock();
-    // 用 setTimeout 讓各頁面的 script（呼叫 window.requireAuth）
-    // 先完成同步註冊，再送出 authed 事件，避免事件先發生、沒人接到。
-    setTimeout(() => window.dispatchEvent(new CustomEvent("app-authed")), 0);
-  } else {
-    buildOverlay();
+  try {
+    if (isStoredAuthValid()) {
+      unlock();
+      // 用 setTimeout 讓各頁面的 script（呼叫 window.requireAuth）
+      // 先完成同步註冊，再送出 authed 事件，避免事件先發生、沒人接到。
+      setTimeout(() => window.dispatchEvent(new CustomEvent("app-authed")), 0);
+    } else {
+      buildOverlay();
+    }
+  } catch (err) {
+    // 例如 config.js 在網路不穩時沒載入成功，window.APP_CONFIG 會是 undefined，
+    // 上面兩個分支都會丟例外。不處理的話畫面會卡在鎖定狀態、且沒有任何提示。
+    console.error("驗證流程初始化失敗", err);
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div id="auth-fatal-error" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:1.1rem;background:#fff;color:#b3261e;">系統載入失敗，請重新整理頁面再試一次</div>'
+    );
   }
 })();
