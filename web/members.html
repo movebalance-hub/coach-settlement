@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-Hant" class="app-locked">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>會員管理</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html">首頁</a>
+    <a href="entry.html">快速登記</a>
+    <a href="members.html" class="active">會員管理</a>
+    <a href="report.html">月結報表</a>
+  </nav>
+
+  <div class="card">
+    <h1>新增會員</h1>
+    <form id="add-member-form">
+      <div class="field">
+        <label for="new-member-name">會員姓名</label>
+        <input type="text" id="new-member-name" required placeholder="輸入會員姓名" />
+      </div>
+
+      <div class="field">
+        <label for="new-member-price">方案單價</label>
+        <input type="number" id="new-member-price" step="0.01" min="0" required />
+      </div>
+
+      <div class="field">
+        <label for="new-member-sessions">初始堂數</label>
+        <input type="number" id="new-member-sessions" step="0.5" min="0" required />
+      </div>
+
+      <button type="submit" id="add-member-btn">新增會員</button>
+      <div class="message" id="add-member-message"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>會員列表</h2>
+    <table class="list-table">
+      <thead>
+        <tr>
+          <th>姓名</th>
+          <th>方案單價</th>
+          <th>剩餘堂數</th>
+          <th>最後更新</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="member-list">
+        <tr class="empty-row"><td colspan="5">載入中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" id="edit-member-card" style="display: none">
+    <h2>編輯會員</h2>
+    <form id="edit-member-form">
+      <div class="field">
+        <label for="edit-member-name">會員姓名</label>
+        <input type="text" id="edit-member-name" required />
+      </div>
+
+      <div class="field">
+        <label for="edit-member-price">方案單價</label>
+        <input type="number" id="edit-member-price" step="0.01" min="0" required />
+      </div>
+
+      <div class="field">
+        <label for="edit-member-sessions">剩餘堂數</label>
+        <input type="number" id="edit-member-sessions" step="0.5" min="0" required />
+      </div>
+
+      <div class="button-row">
+        <button type="submit" id="edit-member-save-btn">儲存</button>
+        <button type="button" id="edit-member-cancel-btn" class="secondary-btn">取消</button>
+      </div>
+      <div class="message" id="edit-member-message"></div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="common.js"></script>
+  <script src="members.js"></script>
+</body>
+</html>

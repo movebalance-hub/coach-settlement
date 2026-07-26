@@ -2,10 +2,10 @@ const coachSelect = document.getElementById("coach-select");
 const newCoachField = document.getElementById("new-coach-field");
 const newCoachNameInput = document.getElementById("new-coach-name");
 const memberNameInput = document.getElementById("member-name");
-const memberNameList = document.getElementById("member-name-list");
+const memberPickerList = document.getElementById("member-picker-list");
+const memberCurrentRemainingInput = document.getElementById("member-current-remaining");
 const unitPriceInput = document.getElementById("unit-price");
 const sessionsUsedInput = document.getElementById("sessions-used");
-const remainingSessionsInput = document.getElementById("remaining-sessions");
 const salesDateInput = document.getElementById("sales-date");
 const form = document.getElementById("entry-form");
 const submitBtn = document.getElementById("submit-btn");
@@ -16,9 +16,9 @@ const editCard = document.getElementById("edit-card");
 const editForm = document.getElementById("edit-form");
 const editCoachSelect = document.getElementById("edit-coach");
 const editMemberInput = document.getElementById("edit-member");
+const editMemberCurrentRemainingInput = document.getElementById("edit-member-current-remaining");
 const editPriceInput = document.getElementById("edit-price");
 const editSessionsInput = document.getElementById("edit-sessions");
-const editRemainingInput = document.getElementById("edit-remaining");
 const editDateInput = document.getElementById("edit-date");
 const editCancelBtn = document.getElementById("edit-cancel-btn");
 const editSaveBtn = document.getElementById("edit-save-btn");
@@ -29,6 +29,11 @@ const NEW_COACH_VALUE = "__new__";
 let coachNames = [];
 let recordsById = new Map();
 let editingId = null;
+
+let membersByName = new Map();
+let membersById = new Map();
+let mainMatchedMemberId = null;
+let editMatchedMemberId = null;
 
 function showCoachLoadFailure(message) {
   coachSelect.innerHTML = '<option value="">載入失敗，請重新整理頁面</option>';
@@ -70,23 +75,25 @@ async function loadCoaches() {
   }
 }
 
-async function loadMemberNames() {
+async function loadMembers() {
   if (!window.dbClient) return;
 
   try {
     const { data, error } = await window.dbClient
-      .from("sales_records")
-      .select("member_name")
-      .order("member_name");
+      .from("members")
+      .select("id, name, unit_price, remaining_sessions")
+      .order("name");
 
     if (error) throw error;
 
-    const uniqueNames = [...new Set(data.map((r) => r.member_name))];
-    memberNameList.innerHTML = uniqueNames
-      .map((name) => `<option value="${escapeHtml(name)}"></option>`)
+    membersByName = new Map(data.map((m) => [m.name, m]));
+    membersById = new Map(data.map((m) => [m.id, m]));
+
+    memberPickerList.innerHTML = data
+      .map((m) => `<option value="${escapeHtml(m.name)}"></option>`)
       .join("");
   } catch (err) {
-    console.error("載入會員姓名清單失敗：", err.message);
+    console.error("載入會員清單失敗：", err.message);
   }
 }
 
@@ -124,9 +131,11 @@ function openEditForm(record) {
     .join("");
 
   editMemberInput.value = record.member_name;
+  editMatchedMemberId = record.member_id || null;
+  const member = record.member_id ? membersById.get(record.member_id) : null;
+  editMemberCurrentRemainingInput.value = member ? member.remaining_sessions : "";
   editPriceInput.value = record.unit_price;
   editSessionsInput.value = record.sessions_used;
-  editRemainingInput.value = record.remaining_sessions;
   editDateInput.value = record.sales_date;
 
   clearMessage(editMessageBox);
@@ -150,7 +159,7 @@ async function loadRecentRecords() {
   try {
     const { data, error } = await window.dbClient
       .from("sales_records")
-      .select("id, sales_date, coach_name, member_name, unit_price, sessions_used, remaining_sessions")
+      .select("id, sales_date, coach_name, member_name, member_id, unit_price, sessions_used, remaining_sessions")
       .order("created_at", { ascending: false })
       .limit(20);
 
@@ -174,6 +183,38 @@ coachSelect.addEventListener("change", () => {
   newCoachField.style.display = coachSelect.value === NEW_COACH_VALUE ? "block" : "none";
 });
 
+memberNameInput.addEventListener("input", () => {
+  const member = membersByName.get(memberNameInput.value.trim());
+
+  if (!member) {
+    mainMatchedMemberId = null;
+    memberCurrentRemainingInput.value = "";
+    return;
+  }
+
+  memberCurrentRemainingInput.value = member.remaining_sessions;
+  if (mainMatchedMemberId !== member.id) {
+    mainMatchedMemberId = member.id;
+    unitPriceInput.value = member.unit_price;
+  }
+});
+
+editMemberInput.addEventListener("input", () => {
+  const member = membersByName.get(editMemberInput.value.trim());
+
+  if (!member) {
+    editMatchedMemberId = null;
+    editMemberCurrentRemainingInput.value = "";
+    return;
+  }
+
+  editMemberCurrentRemainingInput.value = member.remaining_sessions;
+  if (editMatchedMemberId !== member.id) {
+    editMatchedMemberId = member.id;
+    editPriceInput.value = member.unit_price;
+  }
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   clearMessage(messageBox);
@@ -184,12 +225,17 @@ form.addEventListener("submit", async (event) => {
   }
 
   const memberName = memberNameInput.value.trim();
+  const member = membersByName.get(memberName);
   const unitPrice = parseFloat(unitPriceInput.value);
   const sessionsUsed = parseFloat(sessionsUsedInput.value);
-  const remainingSessions = parseFloat(remainingSessionsInput.value);
 
-  if (!coachName || !memberName || !unitPrice || !sessionsUsed || isNaN(remainingSessions)) {
+  if (!coachName || !memberName || !unitPrice || !sessionsUsed) {
     showMessage(messageBox, "請完整填寫所有欄位", "error");
+    return;
+  }
+
+  if (!member) {
+    showMessage(messageBox, "查無此會員，請確認姓名或先至「會員管理」頁新增會員", "error");
     return;
   }
 
@@ -212,10 +258,10 @@ form.addEventListener("submit", async (event) => {
   const { error } = await window.dbClient.from("sales_records").insert({
     sales_date: salesDateInput.value,
     coach_name: coachName,
-    member_name: memberName,
+    member_name: member.name,
+    member_id: member.id,
     unit_price: unitPrice,
-    sessions_used: sessionsUsed,
-    remaining_sessions: remainingSessions
+    sessions_used: sessionsUsed
   });
 
   submitBtn.disabled = false;
@@ -228,9 +274,10 @@ form.addEventListener("submit", async (event) => {
 
   showMessage(messageBox, "登記成功！", "success");
   memberNameInput.value = "";
+  memberCurrentRemainingInput.value = "";
+  mainMatchedMemberId = null;
   unitPriceInput.value = "";
   sessionsUsedInput.value = "";
-  remainingSessionsInput.value = "";
 
   if (coachSelect.value === NEW_COACH_VALUE) {
     newCoachNameInput.value = "";
@@ -240,6 +287,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   await loadRecentRecords();
+  await loadMembers();
 });
 
 listBody.addEventListener("click", async (event) => {
@@ -268,6 +316,7 @@ listBody.addEventListener("click", async (event) => {
     if (id === editingId) closeEditForm();
     showMessage(messageBox, "已刪除該筆紀錄", "success");
     await loadRecentRecords();
+    await loadMembers();
     return;
   }
 });
@@ -282,25 +331,29 @@ editForm.addEventListener("submit", async (event) => {
 
   if (!editingId) return;
 
+  const memberName = editMemberInput.value.trim();
+  const member = membersByName.get(memberName);
+
   const updated = {
     sales_date: editDateInput.value,
     coach_name: editCoachSelect.value,
-    member_name: editMemberInput.value.trim(),
+    member_name: memberName,
     unit_price: parseFloat(editPriceInput.value),
-    sessions_used: parseFloat(editSessionsInput.value),
-    remaining_sessions: parseFloat(editRemainingInput.value)
+    sessions_used: parseFloat(editSessionsInput.value)
   };
 
-  if (
-    !updated.coach_name ||
-    !updated.member_name ||
-    !updated.unit_price ||
-    !updated.sessions_used ||
-    isNaN(updated.remaining_sessions)
-  ) {
+  if (!updated.coach_name || !updated.member_name || !updated.unit_price || !updated.sessions_used) {
     showMessage(editMessageBox, "請完整填寫所有欄位", "error");
     return;
   }
+
+  if (!member) {
+    showMessage(editMessageBox, "查無此會員，請確認姓名或先至「會員管理」頁新增會員", "error");
+    return;
+  }
+
+  updated.member_id = member.id;
+  updated.member_name = member.name;
 
   editSaveBtn.disabled = true;
   editSaveBtn.textContent = "儲存中...";
@@ -318,11 +371,12 @@ editForm.addEventListener("submit", async (event) => {
   closeEditForm();
   showMessage(messageBox, "已更新該筆紀錄", "success");
   await loadRecentRecords();
+  await loadMembers();
 });
 
 salesDateInput.value = new Date().toISOString().slice(0, 10);
 window.requireAuth(() => {
   loadCoaches();
   loadRecentRecords();
-  loadMemberNames();
+  loadMembers();
 });
