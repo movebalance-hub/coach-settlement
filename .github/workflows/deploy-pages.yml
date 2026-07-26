@@ -23,6 +23,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Cache-bust local assets
+        run: |
+          find web -maxdepth 1 -name "*.html" -exec sed -i \
+            -e "s/\.js\"/.js?v=${{ github.sha }}\"/g" \
+            -e "s/\.css\"/.css?v=${{ github.sha }}\"/g" \
+            {} +
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
