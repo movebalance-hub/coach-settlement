@@ -2,7 +2,6 @@ const coachSelect = document.getElementById("coach-select");
 const newCoachField = document.getElementById("new-coach-field");
 const newCoachNameInput = document.getElementById("new-coach-name");
 const oneTimeCheckbox = document.getElementById("one-time-member");
-const showOneTimeMembersCheckbox = document.getElementById("show-one-time-members");
 const memberNameInput = document.getElementById("member-name");
 const memberPickerList = document.getElementById("member-picker-list");
 const memberCurrentRemainingField = document.getElementById("member-current-remaining-field");
@@ -37,7 +36,6 @@ let editingId = null;
 
 let membersByName = new Map();
 let membersById = new Map();
-let latestMembers = [];
 let mainMatchedMemberId = null;
 let editMatchedMemberId = null;
 
@@ -80,17 +78,6 @@ async function loadCoaches() {
   }
 }
 
-function renderMemberPickerList() {
-  const showOneTime = showOneTimeMembersCheckbox.checked;
-  const visibleMembers = showOneTime
-    ? latestMembers
-    : latestMembers.filter((m) => !m.is_one_time);
-
-  memberPickerList.innerHTML = visibleMembers
-    .map((m) => `<option value="${escapeHtml(m.name)}"></option>`)
-    .join("");
-}
-
 async function loadMembers() {
   if (!window.dbClient) {
     showMessage(messageBox, "會員名單載入失敗，自動帶入單價與剩餘堂數可能無法使用，請重新整理頁面", "error");
@@ -101,17 +88,18 @@ async function loadMembers() {
     const { data, error } = await withTimeout(
       window.dbClient
         .from("members")
-        .select("id, name, unit_price, remaining_sessions, is_one_time")
+        .select("id, name, unit_price, remaining_sessions")
         .order("name")
     );
 
     if (error) throw error;
 
-    latestMembers = data;
     membersByName = new Map(data.map((m) => [m.name, m]));
     membersById = new Map(data.map((m) => [m.id, m]));
 
-    renderMemberPickerList();
+    memberPickerList.innerHTML = data
+      .map((m) => `<option value="${escapeHtml(m.name)}"></option>`)
+      .join("");
   } catch (err) {
     console.error("載入會員清單失敗：", err.message);
     showMessage(messageBox, `會員名單載入失敗：${err.message}，自動帶入單價與剩餘堂數可能無法使用，請重新整理頁面`, "error");
@@ -206,10 +194,6 @@ async function loadRecentRecords() {
 
 coachSelect.addEventListener("change", () => {
   newCoachField.style.display = coachSelect.value === NEW_COACH_VALUE ? "block" : "none";
-});
-
-showOneTimeMembersCheckbox.addEventListener("change", () => {
-  renderMemberPickerList();
 });
 
 oneTimeCheckbox.addEventListener("change", () => {
