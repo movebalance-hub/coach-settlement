@@ -32,6 +32,13 @@
         <input type="number" id="new-member-sessions" step="0.5" min="0" required />
       </div>
 
+      <div class="checkbox-field">
+        <label>
+          <input type="checkbox" id="new-member-one-time" />
+          單次消費（體驗課／票券／單堂等，快速登記頁下拉選單預設不列入建議）
+        </label>
+      </div>
+
       <button type="submit" id="add-member-btn">新增會員</button>
       <div class="message" id="add-member-message"></div>
     </form>
@@ -45,12 +52,13 @@
           <th>姓名</th>
           <th>方案單價</th>
           <th>剩餘堂數</th>
+          <th>單次消費</th>
           <th>最後更新</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody id="member-list">
-        <tr class="empty-row"><td colspan="5">載入中...</td></tr>
+        <tr class="empty-row"><td colspan="6">載入中...</td></tr>
       </tbody>
     </table>
   </div>
@@ -71,6 +79,13 @@
       <div class="field">
         <label for="edit-member-sessions">剩餘堂數</label>
         <input type="number" id="edit-member-sessions" step="0.5" min="0" required />
+      </div>
+
+      <div class="checkbox-field">
+        <label>
+          <input type="checkbox" id="edit-member-one-time" />
+          單次消費（體驗課／票券／單堂等，快速登記頁下拉選單預設不列入建議）
+        </label>
       </div>
 
       <div class="button-row">

@@ -19,8 +19,8 @@
     <form id="entry-form">
       <div class="field">
         <label for="coach-select">教練</label>
-        <select id="coach-select" required>
-          <option value="">請選擇教練</option>
+        <select id="coach-select" required disabled>
+          <option value="">載入中...</option>
         </select>
       </div>
 
@@ -33,6 +33,13 @@
         <label>
           <input type="checkbox" id="one-time-member" />
           單次消費會員（不建檔，直接輸入姓名即可）
+        </label>
+      </div>
+
+      <div class="checkbox-field" id="show-one-time-field">
+        <label>
+          <input type="checkbox" id="show-one-time-members" />
+          顯示單次消費會員（體驗課／票券／單堂等，預設不列入下拉建議）
         </label>
       </div>
 

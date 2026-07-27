@@ -9,6 +9,18 @@ function clearMessage(el) {
   el.textContent = "";
 }
 
+// Supabase 的請求沒有內建逾時，網路狀況不好時（例如連線中斷但沒有明確的
+// 失敗回應）await 可能永遠不 resolve 也不 reject，畫面就會卡在「載入中」
+// 不會顯示任何錯誤。用這個包一層，逾時就當作失敗處理，讓呼叫端的 catch
+// 可以顯示「載入失敗，請重新整理」之類的提示。
+function withTimeout(queryPromise, timeoutMs = 15000) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error("網路連線逾時")), timeoutMs);
+  });
+  return Promise.race([queryPromise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;",

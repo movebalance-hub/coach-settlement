@@ -30,11 +30,13 @@ async function loadReport() {
   const { start, end } = monthRange(monthSelect.value);
 
   try {
-    const { data, error } = await window.dbClient
-      .from("sales_records")
-      .select("coach_name, unit_price, sessions_used, amount")
-      .gte("sales_date", start)
-      .lte("sales_date", end);
+    const { data, error } = await withTimeout(
+      window.dbClient
+        .from("sales_records")
+        .select("coach_name, unit_price, sessions_used, amount")
+        .gte("sales_date", start)
+        .lte("sales_date", end)
+    );
 
     if (error) throw error;
 

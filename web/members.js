@@ -2,6 +2,7 @@ const addMemberForm = document.getElementById("add-member-form");
 const newMemberNameInput = document.getElementById("new-member-name");
 const newMemberPriceInput = document.getElementById("new-member-price");
 const newMemberSessionsInput = document.getElementById("new-member-sessions");
+const newMemberOneTimeInput = document.getElementById("new-member-one-time");
 const addMemberBtn = document.getElementById("add-member-btn");
 const addMemberMessage = document.getElementById("add-member-message");
 
@@ -12,6 +13,7 @@ const editMemberForm = document.getElementById("edit-member-form");
 const editMemberNameInput = document.getElementById("edit-member-name");
 const editMemberPriceInput = document.getElementById("edit-member-price");
 const editMemberSessionsInput = document.getElementById("edit-member-sessions");
+const editMemberOneTimeInput = document.getElementById("edit-member-one-time");
 const editMemberCancelBtn = document.getElementById("edit-member-cancel-btn");
 const editMemberSaveBtn = document.getElementById("edit-member-save-btn");
 const editMemberMessage = document.getElementById("edit-member-message");
@@ -31,6 +33,7 @@ function viewRowHtml(m) {
       <td>${escapeHtml(m.name)}</td>
       <td>${m.unit_price}</td>
       <td>${m.remaining_sessions}</td>
+      <td>${m.is_one_time ? "是" : ""}</td>
       <td>${formatDateTime(m.updated_at)}</td>
       <td class="row-actions">
         <button type="button" class="edit-btn" data-id="${m.id}">編輯</button>
@@ -49,6 +52,7 @@ function openEditForm(member) {
   editMemberNameInput.value = member.name;
   editMemberPriceInput.value = member.unit_price;
   editMemberSessionsInput.value = member.remaining_sessions;
+  editMemberOneTimeInput.checked = !!member.is_one_time;
 
   clearMessage(editMemberMessage);
   editMemberCard.style.display = "block";
@@ -69,10 +73,12 @@ async function loadMembers() {
   }
 
   try {
-    const { data, error } = await window.dbClient
-      .from("members")
-      .select("id, name, unit_price, remaining_sessions, updated_at")
-      .order("name");
+    const { data, error } = await withTimeout(
+      window.dbClient
+        .from("members")
+        .select("id, name, unit_price, remaining_sessions, is_one_time, updated_at")
+        .order("name")
+    );
 
     if (error) throw error;
 
@@ -109,7 +115,8 @@ addMemberForm.addEventListener("submit", async (event) => {
   const { error } = await window.dbClient.from("members").insert({
     name,
     unit_price: unitPrice,
-    remaining_sessions: remainingSessions
+    remaining_sessions: remainingSessions,
+    is_one_time: newMemberOneTimeInput.checked
   });
 
   addMemberBtn.disabled = false;
@@ -148,7 +155,8 @@ editMemberForm.addEventListener("submit", async (event) => {
   const updated = {
     name: editMemberNameInput.value.trim(),
     unit_price: parseFloat(editMemberPriceInput.value),
-    remaining_sessions: parseFloat(editMemberSessionsInput.value)
+    remaining_sessions: parseFloat(editMemberSessionsInput.value),
+    is_one_time: editMemberOneTimeInput.checked
   };
 
   if (!updated.name || !updated.unit_price || isNaN(updated.remaining_sessions)) {

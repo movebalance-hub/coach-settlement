@@ -6,6 +6,17 @@
 (function () {
   const STORAGE_KEY = "coach_settlement_auth_v1";
 
+  // 記錄目前是否已通過驗證，讓 requireAuth 在任何時間點呼叫都能拿到正確結果，
+  // 不依賴「app-authed 事件觸發時，各頁面 script 是否已經跑到 requireAuth」這種時序假設。
+  // 過去用 setTimeout(..., 0) 讓事件晚一點觸發，指望後面的 <script> 標籤都已經
+  // 同步執行完畢並註冊好監聽器；但瀏覽器在等待後續 script 的網路請求（例如剛部署、
+  // 檔名帶新的 cache-busting 版本號、瀏覽器快取未命中）時，是可能先去處理已經
+  // 到時間的 timer 的。一旦 setTimeout 搶先觸發，事件會派送給「目前」還沒有人監聽
+  // 的 window，而 { once: true } 讓這個事件永遠不會再發第二次，等後面的頁面 script
+  // 才呼叫 requireAuth 註冊監聽器時就再也等不到了——畫面會卡在初始的「載入中」文字，
+  // 且不會有任何錯誤訊息，因為沒有任何 request 真的失敗，只是根本沒被呼叫。
+  let authed = false;
+
   async function sha256Hex(text) {
     const data = new TextEncoder().encode(text);
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -49,6 +60,7 @@
       if (hash === window.APP_CONFIG.ACCESS_PASSWORD_HASH) {
         localStorage.setItem(STORAGE_KEY, hash);
         unlock();
+        authed = true;
         window.dispatchEvent(new CustomEvent("app-authed"));
       } else {
         errorEl.textContent = "密碼錯誤，請再試一次";
@@ -62,17 +74,20 @@
   }
 
   // 供各頁面的資料載入程式呼叫：密碼通過前，callback 不會被執行，
-  // 也就不會有任何 Supabase 請求被發出去。
+  // 也就不會有任何 Supabase 請求被發出去。若呼叫當下已經通過驗證（例如密碼
+  // 已記住），就直接執行 callback，不必等事件；避免任何時序上的競爭條件。
   window.requireAuth = function (callback) {
+    if (authed) {
+      callback();
+      return;
+    }
     window.addEventListener("app-authed", callback, { once: true });
   };
 
   try {
     if (isStoredAuthValid()) {
       unlock();
-      // 用 setTimeout 讓各頁面的 script（呼叫 window.requireAuth）
-      // 先完成同步註冊，再送出 authed 事件，避免事件先發生、沒人接到。
-      setTimeout(() => window.dispatchEvent(new CustomEvent("app-authed")), 0);
+      authed = true;
     } else {
       buildOverlay();
     }
