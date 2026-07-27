@@ -17,6 +17,7 @@ const editMemberOneTimeInput = document.getElementById("edit-member-one-time");
 const editMemberCancelBtn = document.getElementById("edit-member-cancel-btn");
 const editMemberSaveBtn = document.getElementById("edit-member-save-btn");
 const editMemberMessage = document.getElementById("edit-member-message");
+const memberListMessage = document.getElementById("member-list-message");
 
 let membersById = new Map();
 let editingMemberId = null;
@@ -37,6 +38,7 @@ function viewRowHtml(m) {
       <td>${formatDateTime(m.updated_at)}</td>
       <td class="row-actions">
         <button type="button" class="edit-btn" data-id="${m.id}">編輯</button>
+        <button type="button" class="delete-btn" data-id="${m.id}">刪除</button>
       </td>
     </tr>`;
 }
@@ -68,7 +70,7 @@ function closeEditForm() {
 
 async function loadMembers() {
   if (!window.dbClient) {
-    memberListBody.innerHTML = '<tr class="empty-row"><td colspan="5">載入失敗，請重新整理頁面</td></tr>';
+    memberListBody.innerHTML = '<tr class="empty-row"><td colspan="6">載入失敗，請重新整理頁面</td></tr>';
     return;
   }
 
@@ -85,15 +87,27 @@ async function loadMembers() {
     membersById = new Map(data.map((m) => [m.id, m]));
 
     if (data.length === 0) {
-      memberListBody.innerHTML = '<tr class="empty-row"><td colspan="5">尚無會員</td></tr>';
+      memberListBody.innerHTML = '<tr class="empty-row"><td colspan="6">尚無會員</td></tr>';
       return;
     }
 
     memberListBody.innerHTML = data.map(viewRowHtml).join("");
     if (editingMemberId) highlightEditingRow();
   } catch (err) {
-    memberListBody.innerHTML = `<tr class="empty-row"><td colspan="5">載入失敗：${err.message}，請重新整理頁面</td></tr>`;
+    memberListBody.innerHTML = `<tr class="empty-row"><td colspan="6">載入失敗：${err.message}，請重新整理頁面</td></tr>`;
   }
+}
+
+async function countMemberSalesRecords(memberId) {
+  const { count, error } = await withTimeout(
+    window.dbClient
+      .from("sales_records")
+      .select("id", { count: "exact", head: true })
+      .eq("member_id", memberId)
+  );
+
+  if (error) throw error;
+  return count;
 }
 
 addMemberForm.addEventListener("submit", async (event) => {
@@ -133,13 +147,46 @@ addMemberForm.addEventListener("submit", async (event) => {
   await loadMembers();
 });
 
-memberListBody.addEventListener("click", (event) => {
+memberListBody.addEventListener("click", async (event) => {
   const target = event.target;
   const id = target.dataset.id;
-  if (!id || !target.classList.contains("edit-btn")) return;
+  if (!id) return;
 
   const member = membersById.get(id);
-  openEditForm(member);
+
+  if (target.classList.contains("edit-btn")) {
+    openEditForm(member);
+    return;
+  }
+
+  if (target.classList.contains("delete-btn")) {
+    clearMessage(memberListMessage);
+
+    let recordCount = 0;
+    try {
+      recordCount = await countMemberSalesRecords(id);
+    } catch (err) {
+      showMessage(memberListMessage, `刪除前確認歷史紀錄失敗：${err.message}，請重新整理頁面再試一次`, "error");
+      return;
+    }
+
+    const confirmMessage =
+      recordCount > 0
+        ? `會員「${member.name}」有 ${recordCount} 筆歷史銷課紀錄。刪除會員後，這些紀錄仍會保留，但會員姓名以外的關聯（例如剩餘堂數自動查詢）將會失效。此動作無法復原，確定要刪除嗎？`
+        : `確定要刪除會員「${member.name}」嗎？此動作無法復原。`;
+
+    if (!confirm(confirmMessage)) return;
+
+    const { error } = await window.dbClient.from("members").delete().eq("id", id);
+    if (error) {
+      showMessage(memberListMessage, `刪除失敗：${error.message}`, "error");
+      return;
+    }
+
+    if (id === editingMemberId) closeEditForm();
+    showMessage(memberListMessage, `已刪除會員「${member.name}」`, "success");
+    await loadMembers();
+  }
 });
 
 editMemberCancelBtn.addEventListener("click", () => {

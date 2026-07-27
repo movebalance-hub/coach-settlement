@@ -37,7 +37,7 @@ create table sales_records (
   sales_date         date not null default current_date,
   coach_name         text not null,
   member_name        text not null,
-  member_id          uuid references members (id),
+  member_id          uuid references members (id) on delete set null,
   unit_price         numeric(10,2) not null,
   sessions_used      numeric(10,2) not null,
   remaining_sessions numeric(10,2) not null,
