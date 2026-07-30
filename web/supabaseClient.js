@@ -14,6 +14,7 @@ if (typeof supabase === "undefined" || !window.APP_CONFIG) {
 } else {
   window.dbClient = supabase.createClient(
     window.APP_CONFIG.SUPABASE_URL,
-    window.APP_CONFIG.SUPABASE_ANON_KEY
+    window.APP_CONFIG.SUPABASE_ANON_KEY,
+    { db: { schema: "coach_settlement" } }
   );
 }
