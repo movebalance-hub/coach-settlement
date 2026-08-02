@@ -14,7 +14,6 @@ const editMemberNameInput = document.getElementById("edit-member-name");
 const editMemberPriceInput = document.getElementById("edit-member-price");
 const editMemberSessionsInput = document.getElementById("edit-member-sessions");
 const editMemberCoachInput = document.getElementById("edit-member-coach");
-const editMemberOneTimeInput = document.getElementById("edit-member-one-time");
 const editMemberCancelBtn = document.getElementById("edit-member-cancel-btn");
 const editMemberSaveBtn = document.getElementById("edit-member-save-btn");
 const editMemberMessage = document.getElementById("edit-member-message");
@@ -57,7 +56,6 @@ function openEditForm(member) {
   editMemberPriceInput.value = member.unit_price;
   editMemberSessionsInput.value = member.remaining_sessions;
   editMemberCoachInput.value = member.primary_coach || "";
-  editMemberOneTimeInput.checked = !!member.is_one_time;
 
   clearMessage(editMemberMessage);
   editMemberCard.style.display = "block";
@@ -206,8 +204,7 @@ editMemberForm.addEventListener("submit", async (event) => {
     name: editMemberNameInput.value.trim(),
     unit_price: parseFloat(editMemberPriceInput.value),
     remaining_sessions: parseFloat(editMemberSessionsInput.value),
-    primary_coach: editMemberCoachInput.value || null,
-    is_one_time: editMemberOneTimeInput.checked
+    primary_coach: editMemberCoachInput.value || null
   };
 
   if (!updated.name || !updated.unit_price || isNaN(updated.remaining_sessions)) {
