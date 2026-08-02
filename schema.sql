@@ -23,11 +23,13 @@ create table members (
   name               text not null unique,
   unit_price         numeric(10,2) not null,
   remaining_sessions numeric(10,2) not null default 0,
+  primary_coach      text check (primary_coach is null or primary_coach in ('Jason','Jacky','姿羽')),
   is_one_time        boolean not null default false,
   updated_at         timestamptz not null default now()
 );
 
 comment on column members.is_one_time is '單次消費會員（體驗課/票券/單堂等），快速登記頁下拉選單預設不列入建議';
+comment on column members.primary_coach is '主要負責教練，僅限 Jason / Jacky / 姿羽 三選一，可留空';
 
 -- ------------------------------------------------------------
 -- 銷課快速登記（可連結 members 自動扣課，或作為單次消費紀錄不建檔）

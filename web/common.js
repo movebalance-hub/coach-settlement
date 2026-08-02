@@ -30,3 +30,11 @@ function escapeHtml(value) {
     "'": "&#39;"
   }[c]));
 }
+
+// 主要負責教練的顏色標示：Jason 橘色、Jacky 藍色、姿羽 綠色
+function coachColorClass(coach) {
+  if (coach === "Jason") return "coach-jason";
+  if (coach === "Jacky") return "coach-jacky";
+  if (coach === "姿羽") return "coach-ziyu";
+  return "";
+}

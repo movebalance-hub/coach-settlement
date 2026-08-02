@@ -2,6 +2,7 @@ const addMemberForm = document.getElementById("add-member-form");
 const newMemberNameInput = document.getElementById("new-member-name");
 const newMemberPriceInput = document.getElementById("new-member-price");
 const newMemberSessionsInput = document.getElementById("new-member-sessions");
+const newMemberCoachInput = document.getElementById("new-member-coach");
 const newMemberOneTimeInput = document.getElementById("new-member-one-time");
 const addMemberBtn = document.getElementById("add-member-btn");
 const addMemberMessage = document.getElementById("add-member-message");
@@ -13,6 +14,7 @@ const editMemberForm = document.getElementById("edit-member-form");
 const editMemberNameInput = document.getElementById("edit-member-name");
 const editMemberPriceInput = document.getElementById("edit-member-price");
 const editMemberSessionsInput = document.getElementById("edit-member-sessions");
+const editMemberCoachInput = document.getElementById("edit-member-coach");
 const editMemberOneTimeInput = document.getElementById("edit-member-one-time");
 const editMemberCancelBtn = document.getElementById("edit-member-cancel-btn");
 const editMemberSaveBtn = document.getElementById("edit-member-save-btn");
@@ -34,6 +36,7 @@ function viewRowHtml(m) {
       <td>${escapeHtml(m.name)}</td>
       <td>${m.unit_price}</td>
       <td>${m.remaining_sessions}</td>
+      <td class="${coachColorClass(m.primary_coach)}">${escapeHtml(m.primary_coach || "")}</td>
       <td>${m.is_one_time ? "是" : ""}</td>
       <td>${formatDateTime(m.updated_at)}</td>
       <td class="row-actions">
@@ -54,6 +57,7 @@ function openEditForm(member) {
   editMemberNameInput.value = member.name;
   editMemberPriceInput.value = member.unit_price;
   editMemberSessionsInput.value = member.remaining_sessions;
+  editMemberCoachInput.value = member.primary_coach || "";
   editMemberOneTimeInput.checked = !!member.is_one_time;
 
   clearMessage(editMemberMessage);
@@ -78,7 +82,7 @@ async function loadMembers() {
     const { data, error } = await withTimeout(
       window.dbClient
         .from("members")
-        .select("id, name, unit_price, remaining_sessions, is_one_time, updated_at")
+        .select("id, name, unit_price, remaining_sessions, primary_coach, is_one_time, updated_at")
         .order("name")
     );
 
@@ -87,14 +91,14 @@ async function loadMembers() {
     membersById = new Map(data.map((m) => [m.id, m]));
 
     if (data.length === 0) {
-      memberListBody.innerHTML = '<tr class="empty-row"><td colspan="6">尚無會員</td></tr>';
+      memberListBody.innerHTML = '<tr class="empty-row"><td colspan="7">尚無會員</td></tr>';
       return;
     }
 
     memberListBody.innerHTML = data.map(viewRowHtml).join("");
     if (editingMemberId) highlightEditingRow();
   } catch (err) {
-    memberListBody.innerHTML = `<tr class="empty-row"><td colspan="6">載入失敗：${err.message}，請重新整理頁面</td></tr>`;
+    memberListBody.innerHTML = `<tr class="empty-row"><td colspan="7">載入失敗：${err.message}，請重新整理頁面</td></tr>`;
   }
 }
 
@@ -130,6 +134,7 @@ addMemberForm.addEventListener("submit", async (event) => {
     name,
     unit_price: unitPrice,
     remaining_sessions: remainingSessions,
+    primary_coach: newMemberCoachInput.value || null,
     is_one_time: newMemberOneTimeInput.checked
   });
 
@@ -203,6 +208,7 @@ editMemberForm.addEventListener("submit", async (event) => {
     name: editMemberNameInput.value.trim(),
     unit_price: parseFloat(editMemberPriceInput.value),
     remaining_sessions: parseFloat(editMemberSessionsInput.value),
+    primary_coach: editMemberCoachInput.value || null,
     is_one_time: editMemberOneTimeInput.checked
   };
 

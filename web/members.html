@@ -32,6 +32,16 @@
         <input type="number" id="new-member-sessions" step="0.5" min="0" required />
       </div>
 
+      <div class="field">
+        <label for="new-member-coach">主要負責教練</label>
+        <select id="new-member-coach">
+          <option value="">未指定</option>
+          <option value="Jason">Jason</option>
+          <option value="Jacky">Jacky</option>
+          <option value="姿羽">姿羽</option>
+        </select>
+      </div>
+
       <div class="checkbox-field">
         <label>
           <input type="checkbox" id="new-member-one-time" />
@@ -52,13 +62,14 @@
           <th>姓名</th>
           <th>方案單價</th>
           <th>剩餘堂數</th>
+          <th>負責教練</th>
           <th>單次消費</th>
           <th>最後更新</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody id="member-list">
-        <tr class="empty-row"><td colspan="6">載入中...</td></tr>
+        <tr class="empty-row"><td colspan="7">載入中...</td></tr>
       </tbody>
     </table>
     <div class="message" id="member-list-message"></div>
@@ -80,6 +91,16 @@
       <div class="field">
         <label for="edit-member-sessions">剩餘堂數</label>
         <input type="number" id="edit-member-sessions" step="0.5" min="0" required />
+      </div>
+
+      <div class="field">
+        <label for="edit-member-coach">主要負責教練</label>
+        <select id="edit-member-coach">
+          <option value="">未指定</option>
+          <option value="Jason">Jason</option>
+          <option value="Jacky">Jacky</option>
+          <option value="姿羽">姿羽</option>
+        </select>
       </div>
 
       <div class="checkbox-field">

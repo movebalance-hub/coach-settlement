@@ -38,8 +38,10 @@
 
       <div class="field">
         <label for="member-name">會員姓名</label>
-        <input type="text" id="member-name" required placeholder="輸入姓名以搜尋既有會員" list="member-picker-list" autocomplete="off" />
-        <datalist id="member-picker-list"></datalist>
+        <div class="combobox">
+          <input type="text" id="member-name" required placeholder="輸入姓名以搜尋既有會員" autocomplete="off" />
+          <ul class="combobox-list" id="member-name-list"></ul>
+        </div>
       </div>
 
       <div class="field" id="member-current-remaining-field">
@@ -104,7 +106,10 @@
 
       <div class="field">
         <label for="edit-member">會員姓名</label>
-        <input type="text" id="edit-member" required list="member-picker-list" autocomplete="off" />
+        <div class="combobox">
+          <input type="text" id="edit-member" required autocomplete="off" />
+          <ul class="combobox-list" id="edit-member-list"></ul>
+        </div>
       </div>
 
       <div class="field" id="edit-member-current-remaining-field">
@@ -140,6 +145,7 @@
   <script src="auth.js"></script>
   <script src="supabaseClient.js"></script>
   <script src="common.js"></script>
+  <script src="combobox.js"></script>
   <script src="entry.js"></script>
 </body>
 </html>

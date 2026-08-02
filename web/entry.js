@@ -3,7 +3,7 @@ const newCoachField = document.getElementById("new-coach-field");
 const newCoachNameInput = document.getElementById("new-coach-name");
 const oneTimeCheckbox = document.getElementById("one-time-member");
 const memberNameInput = document.getElementById("member-name");
-const memberPickerList = document.getElementById("member-picker-list");
+const memberNameList = document.getElementById("member-name-list");
 const memberCurrentRemainingField = document.getElementById("member-current-remaining-field");
 const memberCurrentRemainingInput = document.getElementById("member-current-remaining");
 const unitPriceInput = document.getElementById("unit-price");
@@ -19,6 +19,7 @@ const editForm = document.getElementById("edit-form");
 const editCoachSelect = document.getElementById("edit-coach");
 const editOneTimeCheckbox = document.getElementById("edit-one-time-member");
 const editMemberInput = document.getElementById("edit-member");
+const editMemberList = document.getElementById("edit-member-list");
 const editMemberCurrentRemainingField = document.getElementById("edit-member-current-remaining-field");
 const editMemberCurrentRemainingInput = document.getElementById("edit-member-current-remaining");
 const editPriceInput = document.getElementById("edit-price");
@@ -38,6 +39,9 @@ let membersByName = new Map();
 let membersById = new Map();
 let mainMatchedMemberId = null;
 let editMatchedMemberId = null;
+
+const memberNameCombobox = createMemberCombobox(memberNameInput, memberNameList);
+const editMemberCombobox = createMemberCombobox(editMemberInput, editMemberList);
 
 function showCoachLoadFailure(message) {
   coachSelect.innerHTML = '<option value="">載入失敗，請重新整理頁面</option>';
@@ -88,7 +92,7 @@ async function loadMembers() {
     const { data, error } = await withTimeout(
       window.dbClient
         .from("members")
-        .select("id, name, unit_price, remaining_sessions")
+        .select("id, name, unit_price, remaining_sessions, primary_coach")
         .order("name")
     );
 
@@ -97,9 +101,8 @@ async function loadMembers() {
     membersByName = new Map(data.map((m) => [m.name, m]));
     membersById = new Map(data.map((m) => [m.id, m]));
 
-    memberPickerList.innerHTML = data
-      .map((m) => `<option value="${escapeHtml(m.name)}"></option>`)
-      .join("");
+    memberNameCombobox.setMembers(data);
+    editMemberCombobox.setMembers(data);
   } catch (err) {
     console.error("載入會員清單失敗：", err.message);
     showMessage(messageBox, `會員名單載入失敗：${err.message}，自動帶入單價與剩餘堂數可能無法使用，請重新整理頁面`, "error");
