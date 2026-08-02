@@ -297,6 +297,8 @@ form.addEventListener("submit", async (event) => {
     sessions_used: sessionsUsed
   };
 
+  let newRemainingSessions = 0;
+
   if (isOneTime) {
     newRecord.member_name = memberName;
     newRecord.member_id = null;
@@ -304,17 +306,35 @@ form.addEventListener("submit", async (event) => {
   } else {
     newRecord.member_name = member.name;
     newRecord.member_id = member.id;
+    newRemainingSessions = member.remaining_sessions - sessionsUsed;
+    newRecord.remaining_sessions = newRemainingSessions;
   }
 
   const { error } = await window.dbClient.from("sales_records").insert(newRecord);
 
-  submitBtn.disabled = false;
-  submitBtn.textContent = "送出登記";
-
   if (error) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "送出登記";
     showMessage(messageBox, `登記失敗：${error.message}`, "error");
     return;
   }
+
+  if (!isOneTime) {
+    const { error: memberUpdateError } = await window.dbClient
+      .from("members")
+      .update({ remaining_sessions: newRemainingSessions })
+      .eq("id", member.id);
+
+    if (memberUpdateError) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "送出登記";
+      showMessage(messageBox, `登記已送出，但更新會員剩餘堂數失敗：${memberUpdateError.message}`, "error");
+      return;
+    }
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = "送出登記";
 
   showMessage(messageBox, "登記成功！", "success");
   memberNameInput.value = "";
