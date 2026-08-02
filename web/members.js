@@ -3,7 +3,6 @@ const newMemberNameInput = document.getElementById("new-member-name");
 const newMemberPriceInput = document.getElementById("new-member-price");
 const newMemberSessionsInput = document.getElementById("new-member-sessions");
 const newMemberCoachInput = document.getElementById("new-member-coach");
-const newMemberOneTimeInput = document.getElementById("new-member-one-time");
 const addMemberBtn = document.getElementById("add-member-btn");
 const addMemberMessage = document.getElementById("add-member-message");
 
@@ -134,8 +133,7 @@ addMemberForm.addEventListener("submit", async (event) => {
     name,
     unit_price: unitPrice,
     remaining_sessions: remainingSessions,
-    primary_coach: newMemberCoachInput.value || null,
-    is_one_time: newMemberOneTimeInput.checked
+    primary_coach: newMemberCoachInput.value || null
   });
 
   addMemberBtn.disabled = false;
