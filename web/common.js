@@ -21,6 +21,13 @@ function withTimeout(queryPromise, timeoutMs = 15000) {
   return Promise.race([queryPromise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
+// 用本地時間組出 YYYY-MM-DD，避免 toISOString() 會先轉成 UTC
+// 導致台灣（UTC+8）午夜附近的日期被推到前一天
+function localDateISO(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;",
