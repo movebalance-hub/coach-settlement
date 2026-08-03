@@ -9,8 +9,7 @@ function monthRange(monthValue) {
   const [year, month] = monthValue.split("-").map(Number);
   const firstDay = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0);
-  const toISO = (d) => d.toISOString().slice(0, 10);
-  return { start: toISO(firstDay), end: toISO(lastDay) };
+  return { start: localDateISO(firstDay), end: localDateISO(lastDay) };
 }
 
 function showReportLoadFailure(message) {
@@ -199,5 +198,5 @@ clearBtn.addEventListener("click", handleClear);
 
 monthSelect.addEventListener("change", loadReport);
 
-monthSelect.value = new Date().toISOString().slice(0, 7);
+monthSelect.value = localDateISO().slice(0, 7);
 window.requireAuth(loadReport);

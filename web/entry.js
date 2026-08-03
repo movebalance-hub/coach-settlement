@@ -176,7 +176,6 @@ async function loadRecentRecords() {
         .from("sales_records")
         .select("id, sales_date, coach_name, member_name, member_id, unit_price, sessions_used, remaining_sessions")
         .order("created_at", { ascending: false })
-        .limit(20)
     );
 
     if (error) throw error;
@@ -446,7 +445,7 @@ editForm.addEventListener("submit", async (event) => {
   await loadMembers();
 });
 
-salesDateInput.value = new Date().toISOString().slice(0, 10);
+salesDateInput.value = localDateISO();
 window.requireAuth(() => {
   loadCoaches();
   loadRecentRecords();
