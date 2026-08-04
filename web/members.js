@@ -80,7 +80,8 @@ async function loadMembers() {
       window.dbClient
         .from("members")
         .select("id, name, unit_price, remaining_sessions, primary_coach, is_one_time, updated_at")
-        .order("name")
+        .order("primary_coach", { ascending: true, nullsFirst: false })
+        .order("name", { ascending: true })
     );
 
     if (error) throw error;
