@@ -13,6 +13,7 @@ const form = document.getElementById("entry-form");
 const submitBtn = document.getElementById("submit-btn");
 const messageBox = document.getElementById("message");
 const listBody = document.getElementById("record-list");
+const recordMonthSelect = document.getElementById("record-month-select");
 
 const editCard = document.getElementById("edit-card");
 const editForm = document.getElementById("edit-form");
@@ -170,11 +171,15 @@ async function loadRecentRecords() {
     return;
   }
 
+  const { start, end } = monthRange(recordMonthSelect.value);
+
   try {
     const { data, error } = await withTimeout(
       window.dbClient
         .from("sales_records")
         .select("id, sales_date, coach_name, member_name, member_id, unit_price, sessions_used, remaining_sessions")
+        .gte("sales_date", start)
+        .lte("sales_date", end)
         .order("coach_name", { ascending: true })
         .order("created_at", { ascending: false })
     );
@@ -184,7 +189,7 @@ async function loadRecentRecords() {
     recordsById = new Map(data.map((r) => [r.id, r]));
 
     if (data.length === 0) {
-      listBody.innerHTML = '<tr class="empty-row"><td colspan="7">尚無登記紀錄</td></tr>';
+      listBody.innerHTML = `<tr class="empty-row"><td colspan="7">${monthLabel(recordMonthSelect.value)}尚無登記紀錄</td></tr>`;
       return;
     }
 
@@ -446,7 +451,10 @@ editForm.addEventListener("submit", async (event) => {
   await loadMembers();
 });
 
+recordMonthSelect.addEventListener("change", loadRecentRecords);
+
 salesDateInput.value = localDateISO();
+recordMonthSelect.value = localDateISO().slice(0, 7);
 window.requireAuth(() => {
   loadCoaches();
   loadRecentRecords();

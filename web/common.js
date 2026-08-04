@@ -45,3 +45,16 @@ function coachColorClass(coach) {
   if (coach === "姿羽") return "coach-ziyu";
   return "";
 }
+
+// 把 <input type="month"> 的值（YYYY-MM）換算成當月第一天／最後一天的日期字串
+function monthRange(monthValue) {
+  const [year, month] = monthValue.split("-").map(Number);
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  return { start: localDateISO(firstDay), end: localDateISO(lastDay) };
+}
+
+function monthLabel(monthValue) {
+  const [year, month] = monthValue.split("-");
+  return `${year}年${month}月`;
+}

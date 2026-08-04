@@ -5,13 +5,6 @@ const coachListBody = document.getElementById("coach-list-report");
 const exportBtn = document.getElementById("export-btn");
 const clearBtn = document.getElementById("clear-btn");
 
-function monthRange(monthValue) {
-  const [year, month] = monthValue.split("-").map(Number);
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
-  return { start: localDateISO(firstDay), end: localDateISO(lastDay) };
-}
-
 function showReportLoadFailure(message) {
   priceListBody.innerHTML = '<tr class="empty-row"><td colspan="2">載入失敗，請重新整理頁面</td></tr>';
   coachListBody.innerHTML = '<tr class="empty-row"><td colspan="3">載入失敗，請重新整理頁面</td></tr>';
@@ -72,11 +65,6 @@ async function loadReport() {
   } catch (err) {
     showReportLoadFailure(`載入報表失敗：${err.message}`);
   }
-}
-
-function monthLabel(monthValue) {
-  const [year, month] = monthValue.split("-");
-  return `${year}年${month}月`;
 }
 
 function exportMarkerKey(monthValue) {
