@@ -175,6 +175,7 @@ async function loadRecentRecords() {
       window.dbClient
         .from("sales_records")
         .select("id, sales_date, coach_name, member_name, member_id, unit_price, sessions_used, remaining_sessions")
+        .order("coach_name", { ascending: true })
         .order("created_at", { ascending: false })
     );
 
