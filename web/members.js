@@ -194,11 +194,37 @@ editMemberCancelBtn.addEventListener("click", () => {
   closeEditForm();
 });
 
+async function syncLatestSalesRecordRemaining(memberId, remainingSessions) {
+  const { data: latestRecords, error: latestError } = await window.dbClient
+    .from("sales_records")
+    .select("id")
+    .eq("member_id", memberId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (latestError) {
+    console.error("查詢最新銷課紀錄失敗：", latestError.message);
+    return;
+  }
+  if (!latestRecords || latestRecords.length === 0) return;
+
+  const { error: syncError } = await window.dbClient
+    .from("sales_records")
+    .update({ remaining_sessions: remainingSessions })
+    .eq("id", latestRecords[0].id);
+
+  if (syncError) {
+    console.error("同步最新銷課紀錄的剩餘堂數失敗：", syncError.message);
+  }
+}
+
 editMemberForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   clearMessage(editMemberMessage);
 
   if (!editingMemberId) return;
+
+  const previousMember = membersById.get(editingMemberId);
 
   const updated = {
     name: editMemberNameInput.value.trim(),
@@ -217,14 +243,20 @@ editMemberForm.addEventListener("submit", async (event) => {
 
   const { error } = await window.dbClient.from("members").update(updated).eq("id", editingMemberId);
 
-  editMemberSaveBtn.disabled = false;
-  editMemberSaveBtn.textContent = "儲存";
-
   if (error) {
+    editMemberSaveBtn.disabled = false;
+    editMemberSaveBtn.textContent = "儲存";
     const message = error.code === "23505" ? "已有相同姓名的會員" : error.message;
     showMessage(editMemberMessage, `更新失敗：${message}`, "error");
     return;
   }
+
+  if (previousMember && Number(previousMember.remaining_sessions) !== updated.remaining_sessions) {
+    await syncLatestSalesRecordRemaining(editingMemberId, updated.remaining_sessions);
+  }
+
+  editMemberSaveBtn.disabled = false;
+  editMemberSaveBtn.textContent = "儲存";
 
   closeEditForm();
   await loadMembers();
