@@ -1,1 +1,4 @@
 .claude/
+
+# 其他獨立專案（各自有自己的 git repo），只是放在同一層資料夾方便管理
+/yongheng-checkin/
