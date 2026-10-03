@@ -7,6 +7,7 @@ const addMemberBtn = document.getElementById("add-member-btn");
 const addMemberMessage = document.getElementById("add-member-message");
 
 const memberListBody = document.getElementById("member-list");
+const memberSearchInput = document.getElementById("member-search");
 
 const editMemberCard = document.getElementById("edit-member-card");
 const editMemberForm = document.getElementById("edit-member-form");
@@ -20,6 +21,7 @@ const editMemberMessage = document.getElementById("edit-member-message");
 const memberListMessage = document.getElementById("member-list-message");
 
 let membersById = new Map();
+let allMembers = [];
 let editingMemberId = null;
 
 function formatDateTime(iso) {
@@ -87,18 +89,35 @@ async function loadMembers() {
     if (error) throw error;
 
     membersById = new Map(data.map((m) => [m.id, m]));
+    allMembers = data;
 
-    if (data.length === 0) {
-      memberListBody.innerHTML = '<tr class="empty-row"><td colspan="7">尚無會員</td></tr>';
-      return;
-    }
-
-    memberListBody.innerHTML = data.map(viewRowHtml).join("");
-    if (editingMemberId) highlightEditingRow();
+    renderMemberList(filterMembersByName(allMembers, memberSearchInput.value));
   } catch (err) {
     memberListBody.innerHTML = `<tr class="empty-row"><td colspan="7">載入失敗：${err.message}，請重新整理頁面</td></tr>`;
   }
 }
+
+function filterMembersByName(members, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return members;
+  return members.filter((m) => m.name.toLowerCase().includes(q));
+}
+
+function renderMemberList(members) {
+  if (members.length === 0) {
+    memberListBody.innerHTML = allMembers.length === 0
+      ? '<tr class="empty-row"><td colspan="7">尚無會員</td></tr>'
+      : '<tr class="empty-row"><td colspan="7">查無符合的會員</td></tr>';
+    return;
+  }
+
+  memberListBody.innerHTML = members.map(viewRowHtml).join("");
+  if (editingMemberId) highlightEditingRow();
+}
+
+memberSearchInput.addEventListener("input", () => {
+  renderMemberList(filterMembersByName(allMembers, memberSearchInput.value));
+});
 
 async function countMemberSalesRecords(memberId) {
   const { count, error } = await withTimeout(

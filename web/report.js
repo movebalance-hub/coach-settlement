@@ -1,4 +1,5 @@
 const monthSelect = document.getElementById("month-select");
+const coachFilterSelect = document.getElementById("coach-filter-select");
 const messageBox = document.getElementById("message");
 const priceListBody = document.getElementById("price-list");
 const coachListBody = document.getElementById("coach-list-report");
@@ -11,6 +12,29 @@ function showReportLoadFailure(message) {
   showMessage(messageBox, `${message}，請重新整理頁面再試一次`, "error");
 }
 
+async function loadCoachFilterOptions() {
+  if (!window.dbClient) return;
+
+  try {
+    const { data, error } = await withTimeout(
+      window.dbClient.from("coaches").select("name").order("name")
+    );
+    if (error) throw error;
+
+    const selected = coachFilterSelect.value;
+    coachFilterSelect.innerHTML = '<option value="">全部教練</option>';
+    for (const { name } of data) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      coachFilterSelect.appendChild(option);
+    }
+    coachFilterSelect.value = selected;
+  } catch (err) {
+    console.error("載入教練清單失敗：", err.message);
+  }
+}
+
 async function loadReport() {
   clearMessage(messageBox);
 
@@ -20,21 +44,25 @@ async function loadReport() {
   }
 
   const { start, end } = monthRange(monthSelect.value);
+  const coachName = coachFilterSelect.value;
+  const emptyMessage = coachName ? `本月「${coachName}」無銷課紀錄` : "本月無銷課紀錄";
 
   try {
-    const { data, error } = await withTimeout(
-      window.dbClient
-        .from("sales_records")
-        .select("coach_name, unit_price, sessions_used, amount")
-        .gte("sales_date", start)
-        .lte("sales_date", end)
-    );
+    let query = window.dbClient
+      .from("sales_records")
+      .select("coach_name, unit_price, sessions_used, amount")
+      .gte("sales_date", start)
+      .lte("sales_date", end);
+
+    if (coachName) query = query.eq("coach_name", coachName);
+
+    const { data, error } = await withTimeout(query);
 
     if (error) throw error;
 
     if (data.length === 0) {
-      priceListBody.innerHTML = '<tr class="empty-row"><td colspan="2">本月無銷課紀錄</td></tr>';
-      coachListBody.innerHTML = '<tr class="empty-row"><td colspan="3">本月無銷課紀錄</td></tr>';
+      priceListBody.innerHTML = `<tr class="empty-row"><td colspan="2">${emptyMessage}</td></tr>`;
+      coachListBody.innerHTML = `<tr class="empty-row"><td colspan="3">${emptyMessage}</td></tr>`;
       return;
     }
 
@@ -185,6 +213,10 @@ exportBtn.addEventListener("click", handleExport);
 clearBtn.addEventListener("click", handleClear);
 
 monthSelect.addEventListener("change", loadReport);
+coachFilterSelect.addEventListener("change", loadReport);
 
 monthSelect.value = localDateISO().slice(0, 7);
-window.requireAuth(loadReport);
+window.requireAuth(() => {
+  loadCoachFilterOptions();
+  loadReport();
+});
